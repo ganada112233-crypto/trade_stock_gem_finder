@@ -1,0 +1,11 @@
+# Streamlit 기본 테마를 앱 컨셉(다크 네이비 + 딥 퍼플)에 맞춘다.
+# 슬라이더, 체크박스 등 위젯 색상이 여기서 결정된다.
+[theme]
+base = "dark"
+primaryColor = "#7C5CFF"
+backgroundColor = "#0B0E1A"
+secondaryBackgroundColor = "#141829"
+textColor = "#E8EAF2"
+
+[browser]
+gatherUsageStats = false

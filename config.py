@@ -39,7 +39,8 @@ FUNDAMENTAL_MAX_WORKERS = 1         # 재무 데이터 병렬 요청 수 (야후
 FUNDAMENTAL_RETRY_COUNT = 0         # 배포 환경에서 긴 재시도로 앱이 멈추는 것 방지
 FUNDAMENTAL_RETRY_SLEEP = 1.0       # 재무 데이터 재시도 대기 시간(초)
 FUNDAMENTAL_REQUEST_SLEEP = 0.15    # 종목별 재무 요청 사이 휴식(초)
-FUNDAMENTAL_FETCH_LIMIT = 30        # 한 번의 스캔에서 새로 조회할 재무 데이터 최대 개수
+FUNDAMENTAL_FETCH_LIMIT = 0         # 신규 재무 조회는 SEC fallback 중심으로 처리
+SEC_USER_AGENT = "StockGemFinder personal app contact@example.com"
 
 MIN_HISTORY_DAYS = 60               # 지표 계산에 필요한 최소 거래일 수
 

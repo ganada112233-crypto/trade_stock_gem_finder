@@ -49,12 +49,21 @@ def run_scan(
     # 2) 가격 데이터 (배치 다운로드)
     report(f"{len(tickers)}개 종목 주가 다운로드 중…", 0.10)
     prices = load_prices(tickers)
+    latest_prices = {
+        t: float(df["Close"].dropna().iloc[-1])
+        for t, df in prices.items()
+        if df is not None and not df.empty and df["Close"].dropna().size
+    }
 
     # 3) 재무 데이터 (병렬 수집, 진행률 10%→60%)
     def fund_progress(done: int, total: int):
         report(f"재무 데이터 수집 중… ({done}/{total})", 0.10 + 0.50 * done / max(total, 1))
 
-    fundamentals = load_fundamentals(tickers, progress_callback=fund_progress)
+    fundamentals = load_fundamentals(
+        tickers,
+        progress_callback=fund_progress,
+        prices=latest_prices,
+    )
 
     # 4) 기술적 지표
     report("기술적 지표 계산 중…", 0.65)

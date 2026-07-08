@@ -27,14 +27,17 @@ SP500_WIKI_URL = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 UNIVERSE_CACHE_HOURS = 24           # 종목 리스트 캐시 유효 시간
 
 # 스캔 시 한 번에 처리할 종목 수 옵션 (yfinance 속도 고려)
-SCAN_SIZE_OPTIONS = [30, 50, 100, 200, 503]
-DEFAULT_SCAN_SIZE = 50
+SCAN_SIZE_OPTIONS = [30, 50, 100, 200]
+DEFAULT_SCAN_SIZE = 30
 
 PRICE_HISTORY_PERIOD = "1y"         # 최근 1년 주가
 PRICE_CACHE_MINUTES = 60            # 가격 데이터 캐시 유효 시간(분)
-FUNDAMENTAL_CACHE_HOURS = 24        # 재무 데이터 캐시 유효 시간
-PRICE_BATCH_SIZE = 50               # 대량 스캔 시 yfinance 동시 연결 폭 제한
-FUNDAMENTAL_MAX_WORKERS = 3         # 재무 데이터 병렬 요청 수 (파일/소켓 고갈 방지)
+FUNDAMENTAL_CACHE_HOURS = 168       # 재무 데이터 캐시 유효 시간 (개인 사용: 7일)
+PRICE_BATCH_SIZE = 25               # 대량 스캔 시 yfinance 동시 연결 폭 제한
+FUNDAMENTAL_MAX_WORKERS = 1         # 재무 데이터 병렬 요청 수 (야후 rate limit 완화)
+FUNDAMENTAL_RETRY_COUNT = 2         # 재무 데이터 실패 시 재시도 횟수
+FUNDAMENTAL_RETRY_SLEEP = 2.0       # 재무 데이터 재시도 대기 시간(초)
+FUNDAMENTAL_REQUEST_SLEEP = 0.4     # 종목별 재무 요청 사이 휴식(초)
 
 MIN_HISTORY_DAYS = 60               # 지표 계산에 필요한 최소 거래일 수
 

@@ -9,6 +9,7 @@ yfinance의 Ticker.info에서 PER, PBR, PSR, 시가총액, 매출 성장률,
 """
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 from typing import Callable, Dict, List, Optional
 
 import yfinance as yf
@@ -26,18 +27,32 @@ _MAX_WORKERS = config.FUNDAMENTAL_MAX_WORKERS    # 동시 요청 수 (너무 높
 
 def _fetch_one(ticker: str) -> Optional[dict]:
     """종목 하나의 재무 스냅샷을 만든다. 실패 시 None."""
-    session = curl_requests.Session()
-    try:
-        info = yf.Ticker(ticker, session=session).info or {}
-    except Exception as e:
-        log.info("재무 데이터 조회 실패: %s (%s)", ticker, e)
-        return None
-    finally:
-        session.close()
+    info = {}
+    last_error = None
+    for attempt in range(config.FUNDAMENTAL_RETRY_COUNT + 1):
+        session = curl_requests.Session()
+        try:
+            info = yf.Ticker(ticker, session=session).info or {}
+            break
+        except Exception as e:
+            last_error = e
+            if attempt < config.FUNDAMENTAL_RETRY_COUNT:
+                wait = config.FUNDAMENTAL_RETRY_SLEEP * (attempt + 1)
+                log.info("재무 데이터 재시도 대기: %s (%s, %.1f초)", ticker, e, wait)
+                time.sleep(wait)
+            else:
+                log.info("재무 데이터 조회 실패: %s (%s)", ticker, e)
+                return None
+        finally:
+            session.close()
+
+    time.sleep(config.FUNDAMENTAL_REQUEST_SLEEP)
 
     if not info or info.get("regularMarketPrice") is None and info.get("currentPrice") is None:
         # 응답은 왔지만 내용이 비어있는 경우 (상장폐지 등)
         if len(info) < 5:
+            if last_error:
+                log.info("재무 데이터 빈 응답: %s (%s)", ticker, last_error)
             return None
 
     net_income = safe_float(info.get("netIncomeToCommon"))

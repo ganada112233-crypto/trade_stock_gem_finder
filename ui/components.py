@@ -44,7 +44,7 @@ def render_hero(market: dict, scan_stats: dict) -> None:
     gem_count = scan_stats.get("gem_count", 0)
     scan_line = ""
     if scan_stats.get("total", 0) > 0:
-        scan_line = (f"오늘 {scan_stats['total']}개 종목을 스캔해 "
+        scan_line = (f"오늘 {scan_stats['total']}개 종목 중 {scan_stats.get('scored', 0)}개를 점수화해 "
                      f"관찰 가치가 있는 후보 {gem_count}개를 발견했습니다.")
 
     st.markdown(f"""
@@ -67,13 +67,23 @@ def render_stat_tiles(market: dict, scan_stats: dict) -> None:
     top_value = f"{_esc(top['ticker'])} · {top['total_score']:.0f}점" if top else "—"
     top_sub = _esc(top["name"]) if top else "스캔을 실행하세요"
 
+    total = scan_stats.get("total", 0)
+    price_success = scan_stats.get("price_success", 0)
+    fund_success = scan_stats.get("fund_success", 0)
+    if total:
+        quality_value = f"{scan_stats.get('scored', 0)}/{total}"
+        quality_sub = f"가격 {price_success}/{total} · 재무 {fund_success}/{total}"
+    else:
+        quality_value = "—"
+        quality_sub = "스캔 후 표시"
+
     risk = market.get("risk_level", "판단 불가")
     risk_class = {"안정": "mint", "보통": "gold", "경계": "rose"}.get(risk, "")
     vix = market.get("vix")
     vix_sub = f"VIX {vix:.1f}" if vix is not None else "VIX 데이터 없음"
 
     tiles = [
-        ("스캔 종목", f"{scan_stats.get('total', 0)}개", "S&P 500 유니버스", ""),
+        ("점수화 성공", quality_value, quality_sub, "mint" if total and scan_stats.get("scored", 0) else ""),
         ("Gem 후보", f"{scan_stats.get('gem_count', 0)}개",
          f"{config.GEM_GRADE_MIN}점 이상 (Gem Candidate+)", "gold"),
         ("오늘의 최고점", top_value, top_sub, "gold"),

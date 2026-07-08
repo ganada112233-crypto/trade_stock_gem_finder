@@ -53,12 +53,20 @@ def load_results_df(scan_date: str) -> pd.DataFrame:
 def compute_scan_stats(df: pd.DataFrame) -> dict:
     """히어로/타일에 표시할 통계를 계산한다."""
     if df.empty:
-        return {"total": 0, "gem_count": 0, "top": None}
+        return {
+            "total": 0, "scored": 0, "gem_count": 0, "top": None,
+            "price_success": 0, "fund_success": 0,
+        }
     scored = df[df["total_score"].notna()]
     top = scored.iloc[0].to_dict() if len(scored) else None
+    price_success = int(df["indicators"].apply(lambda x: bool(x)).sum())
+    fund_success = int(df["fundamentals"].apply(lambda x: bool(x)).sum())
     return {
         "total": len(df),
+        "scored": len(scored),
         "gem_count": int((scored["total_score"] >= config.GEM_GRADE_MIN).sum()),
+        "price_success": price_success,
+        "fund_success": fund_success,
         "top": top,
     }
 
@@ -77,7 +85,13 @@ with st.sidebar:
         options=config.SCAN_SIZE_OPTIONS,
         value=config.DEFAULT_SCAN_SIZE,
         help="종목이 많을수록 재무 데이터 수집에 시간이 걸립니다. "
-             "전체(503개)는 첫 실행 시 수 분 소요될 수 있습니다.",
+             "개인 사용에서는 30~50개가 가장 안정적입니다.",
+    )
+
+    hide_data_shortage = st.checkbox(
+        "데이터 부족 종목 숨기기",
+        value=True,
+        help="주가 데이터가 부족해 점수 계산이 안 된 종목을 후보 목록에서 제외합니다.",
     )
 
     if st.button("🔎 스캔 시작", type="primary", width="stretch"):
@@ -170,6 +184,9 @@ if results_df.empty:
 # 필터
 filters = render_filters(results_df)
 filtered = apply_filters(results_df, filters)
+
+if hide_data_shortage:
+    filtered = filtered[filtered["total_score"].notna()]
 
 # 데이터 부족 종목은 뒤로, 점수순 정렬
 filtered = filtered.sort_values(

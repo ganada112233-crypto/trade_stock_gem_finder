@@ -99,6 +99,14 @@ def load_fundamentals(
     if not missing:
         return results
 
+    skipped = missing[config.FUNDAMENTAL_FETCH_LIMIT:]
+    missing = missing[:config.FUNDAMENTAL_FETCH_LIMIT]
+    if skipped:
+        log.info(
+            "재무 신규 조회 제한으로 %d개 건너뜀 (캐시 없음, 가격/모멘텀 중심 평가)",
+            len(skipped),
+        )
+
     with ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
         futures = {pool.submit(_fetch_one, t): t for t in missing}
         for future in as_completed(futures):
@@ -114,6 +122,9 @@ def load_fundamentals(
             done += 1
             if progress_callback:
                 progress_callback(done, total)
+
+    if skipped and progress_callback:
+        progress_callback(total, total)
 
     log.info("재무 데이터 수집 완료: %d/%d", len(results), total)
     return results

@@ -92,6 +92,17 @@ def _download_chart(ticker: str) -> Optional[pd.DataFrame]:
     return None
 
 
+def _download_chart_batch(tickers: List[str]) -> Dict[str, pd.DataFrame]:
+    """배포 환경용: chart JSON 엔드포인트로 여러 종목을 단건 순회 조회한다."""
+    result: Dict[str, pd.DataFrame] = {}
+    for t in tickers:
+        df = _download_chart(t)
+        if df is not None:
+            result[t] = df
+        time.sleep(0.05)
+    return result
+
+
 def _download_batch(tickers: List[str]) -> Dict[str, pd.DataFrame]:
     """티커 묶음 하나를 다운로드해서 {티커: OHLCV DataFrame}으로 반환."""
     result: Dict[str, pd.DataFrame] = {}
@@ -179,8 +190,11 @@ def load_prices(tickers: List[str], use_cache: bool = True) -> Dict[str, pd.Data
     for i in range(0, len(missing), _BATCH_SIZE):
         batch = missing[i:i + _BATCH_SIZE]
         log.info("가격 다운로드 %d~%d / %d", i + 1, i + len(batch), len(missing))
-        fetched = _download_batch(batch)
-        if len(batch) > 1:
+        if config.PRICE_USE_YFINANCE_BATCH:
+            fetched = _download_batch(batch)
+        else:
+            fetched = _download_chart_batch(batch)
+        if config.PRICE_USE_YFINANCE_BATCH and len(batch) > 1:
             for t in batch:
                 if t not in fetched:
                     df = _download_chart(t)

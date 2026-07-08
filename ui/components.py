@@ -44,8 +44,13 @@ def render_hero(market: dict, scan_stats: dict) -> None:
     gem_count = scan_stats.get("gem_count", 0)
     scan_line = ""
     if scan_stats.get("total", 0) > 0:
-        scan_line = (f"오늘 {scan_stats['total']}개 종목 중 {scan_stats.get('scored', 0)}개를 점수화해 "
-                     f"관찰 가치가 있는 후보 {gem_count}개를 발견했습니다.")
+        scored = scan_stats.get("scored", 0)
+        if gem_count:
+            scan_line = (f"오늘 {scan_stats['total']}개 종목 중 {scored}개를 점수화해 "
+                         f"Gem 후보 {gem_count}개를 발견했습니다.")
+        else:
+            scan_line = (f"오늘 {scan_stats['total']}개 종목 중 {scored}개를 점수화했습니다. "
+                         f"{config.GEM_GRADE_MIN}점 이상 Gem 후보는 아직 없습니다.")
 
     st.markdown(f"""
 <div class="gem-hero">

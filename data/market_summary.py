@@ -6,38 +6,57 @@ S&P 500, NASDAQ 지수의 최근 흐름과 VIX 수준으로
 """
 
 from typing import Optional
+from urllib.parse import quote
 
-import yfinance as yf
+import requests
 
 import config
 from utils.cache import cache_get, cache_set
 from utils.logger import get_logger
-from utils.validators import safe_float
 
 log = get_logger(__name__)
+_CACHE_KEY = "market_summary_v2"
+
+
+def _recent_closes(ticker: str) -> list[float]:
+    """야후 chart JSON 엔드포인트에서 최근 종가 배열을 가져온다."""
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(ticker, safe='')}"
+    try:
+        resp = requests.get(
+            url,
+            params={"range": "5d", "interval": "1d"},
+            headers={"User-Agent": "Mozilla/5.0 (StockGemFinder)"},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+    except Exception as e:
+        log.info("지수 조회 실패: %s (%s)", ticker, e)
+        return []
+
+    result = (payload.get("chart") or {}).get("result") or []
+    if not result:
+        err = (payload.get("chart") or {}).get("error")
+        log.info("지수 조회 빈 응답: %s (%s)", ticker, err)
+        return []
+
+    quote_data = ((result[0].get("indicators") or {}).get("quote") or [{}])[0]
+    closes = quote_data.get("close") or []
+    return [float(c) for c in closes if c is not None]
 
 
 def _index_change_pct(ticker: str) -> Optional[float]:
     """지수의 최근 하루 등락률(%)을 반환한다."""
-    try:
-        hist = yf.Ticker(ticker).history(period="5d")
-        closes = hist["Close"].dropna()
-        if len(closes) < 2:
-            return None
-        return float((closes.iloc[-1] / closes.iloc[-2] - 1) * 100)
-    except Exception as e:
-        log.info("지수 조회 실패: %s (%s)", ticker, e)
+    closes = _recent_closes(ticker)
+    if len(closes) < 2:
         return None
+    return float((closes[-1] / closes[-2] - 1) * 100)
 
 
 def _vix_level() -> Optional[float]:
     """VIX 최근 종가."""
-    try:
-        hist = yf.Ticker("^VIX").history(period="5d")
-        closes = hist["Close"].dropna()
-        return float(closes.iloc[-1]) if len(closes) else None
-    except Exception:
-        return None
+    closes = _recent_closes("^VIX")
+    return closes[-1] if closes else None
 
 
 def get_market_summary() -> dict:
@@ -46,7 +65,7 @@ def get_market_summary() -> dict:
     {sp500_chg, nasdaq_chg, vix, risk_level, sentence}
     30분 캐시로 불필요한 재조회를 막는다.
     """
-    cached = cache_get("market_summary", 1800)
+    cached = cache_get(_CACHE_KEY, 1800)
     if cached is not None:
         return cached
 
@@ -88,5 +107,5 @@ def get_market_summary() -> dict:
         "risk_level": risk_level,
         "sentence": sentence,
     }
-    cache_set("market_summary", summary)
+    cache_set(_CACHE_KEY, summary)
     return summary
